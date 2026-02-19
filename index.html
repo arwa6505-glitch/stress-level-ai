@@ -173,7 +173,8 @@ function predictStress(){
     "i'm done","im done",
     "i give up",
     "everything is too much",
-    "i can't handle it","i cant handle it"
+    "i can't handle it","i cant handle it",
+    "i want to disappear"
   ];
 
   const positivePhrases = [
@@ -198,6 +199,10 @@ function predictStress(){
     "calm","relaxed","peaceful","fine","okay","good","content","happy","excited"
   ];
 
+  const sadEmoji = (raw.match(/😭|😢|😰|😞|😟|😿/g) || []).length;
+  const angryEmoji = (raw.match(/😡|🤬|😠/g) || []).length;
+  const calmEmoji = (raw.match(/😊|😌|🙂|✨|💗|🌸/g) || []).length;
+
   let score = 0;
 
   highPhrases.forEach(p=>{ if(text.includes(p)) score+=8; });
@@ -207,11 +212,9 @@ function predictStress(){
   mediumWords.forEach(w=>{ if(text.includes(w)) score+=3; });
   lowWords.forEach(w=>{ if(text.includes(w)) score-=3; });
 
-  const capsWords = raw.match(/\b[A-Z]{3,}\b/g) || [];
-  const exclamations = (raw.match(/!/g) || []).length;
-
-  score += Math.min(6, capsWords.length * 2);
-  score += Math.min(5, exclamations);
+  score += sadEmoji * 2;
+  score += angryEmoji * 2;
+  score -= calmEmoji * 1;
 
   renderResult(score);
 }
