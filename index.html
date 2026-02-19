@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stress Level Detection AI</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
@@ -16,21 +16,14 @@
   --border:#ffd6e4;
   --text:#3a2a2f;
   --muted:#6b4b55;
-  --shadow:rgba(255,127,165,0.15);
 }
 
-*{ box-sizing:border-box; }
-
-html, body{
-  width:100%;
-  overflow-x:hidden;
-}
+*{box-sizing:border-box;}
 
 body{
   margin:0;
   font-family:'Poppins',sans-serif;
   background:var(--bg);
-  color:var(--text);
   display:flex;
   justify-content:center;
   align-items:center;
@@ -39,323 +32,162 @@ body{
   padding:20px;
 }
 
-.wrapper{ width:100%; max-width:680px; }
+.wrapper{max-width:700px;width:100%;}
 
-h1{
-  margin:0 0 10px;
-  color:var(--accent);
-  font-weight:600;
-}
-.subtitle{
-  margin:0 0 20px;
-  color:var(--muted);
-  font-size:14px;
-}
+h1{color:var(--accent);margin-bottom:20px;}
 
 .container{
   background:var(--card);
   padding:30px;
   border-radius:25px;
-  box-shadow:0 20px 45px var(--shadow);
-  border:1px solid #ffe1ea;
+  border:1px solid var(--border);
 }
 
 textarea{
   width:100%;
   height:150px;
-  padding:14px;
-  font-size:16px;
+  padding:15px;
   border-radius:20px;
   border:2px solid var(--border);
-  outline:none;
+  font-size:16px;
   resize:none;
-  font-family:inherit;
-  background:#fffafb;
-  transition:0.2s ease;
-  display:block;
 }
-textarea:focus{ border-color:var(--accent); }
-
-.row{ margin-top:15px; }
 
 button{
-  padding:12px 22px;
-  font-size:16px;
+  margin:15px 5px;
+  padding:12px 24px;
   border:none;
   border-radius:999px;
   background:var(--accent);
   color:white;
-  cursor:pointer;
   font-weight:600;
-  transition:0.2s ease;
-  margin:5px;
-  white-space:nowrap;
+  cursor:pointer;
 }
-button:hover{ background:var(--accent-hover); }
 
-.ghost{
-  background:#ffe1ea;
-  color:#6b4b55;
-}
-.ghost:hover{ background:#ffd0de; }
-
-.voice{
-  background:#ffc1d5;
-  color:#5a2a3a;
-}
-.voice:hover{ background:#ffb0cb; }
-
-.status{
-  margin-top:8px;
-  font-size:13px;
-  color:var(--muted);
-  min-height:18px;
-}
+button:hover{background:var(--accent-hover);}
 
 .resultBox{
-  margin-top:20px;
+  margin-top:25px;
   padding:15px;
   border-radius:18px;
   background:#fff6f9;
-  border:1px solid #ffe1ea;
+  border:1px solid var(--border);
 }
 
-.result{
-  font-size:20px;
-  font-weight:600;
-}
-.confidence{
-  margin-top:6px;
-  font-size:14px;
-  color:var(--muted);
-}
-
-.low{ color:#2e7d32; }
-.medium{ color:#b26a00; }
-.high{ color:#b00020; }
-
-/* keep any debug output hidden to user */
-.debug{ display:none !important; }
+.low{color:#2e7d32;}
+.medium{color:#b26a00;}
+.high{color:#b00020;}
 </style>
 </head>
 
 <body>
 <div class="wrapper">
-  <h1>Stress Level Detection AI</h1>
-  <p class="subtitle">Analyzes text + tone (caps, punctuation, patterns). Voice input optional.</p>
+<h1>Stress Level Detection AI</h1>
 
-  <div class="container">
-    <textarea id="inputText" placeholder="Example: I don't know what to do anymore, I just can't handle it..."></textarea>
+<div class="container">
+<textarea id="inputText" placeholder="Type something or use voice..."></textarea>
 
-    <div class="row">
-      <button onclick="predictStress()">Analyze</button>
-      <button class="voice" id="voiceBtn" onclick="toggleVoice()">Voice Input</button>
-      <button class="ghost" onclick="clearAll()">Clear</button>
-    </div>
+<div>
+<button onclick="predictText()">Analyze Text</button>
+<button onclick="startVoice()">Analyze Voice</button>
+<button onclick="clearAll()">Clear</button>
+</div>
 
-    <div class="status" id="status"></div>
-
-    <div class="resultBox">
-      <div class="result" id="result">Predicted Stress Level: —</div>
-      <div class="confidence" id="confidence">Confidence: —</div>
-    </div>
-
-    <div class="debug" id="debug"></div>
-  </div>
+<div class="resultBox">
+<div id="result">Predicted Stress Level: —</div>
+<div id="confidence">Confidence: —</div>
+</div>
+</div>
 </div>
 
 <script>
-// ---------------------------
-// Core prediction (more tone complexity)
-// ---------------------------
-function predictStress(){
-  const raw = (document.getElementById("inputText").value || "").trim();
-  const text = raw.toLowerCase();
+let audioContext;
+let analyser;
+let microphone;
+let dataArray;
+let listening=false;
 
-  // Tokenize words
-  const words = text.match(/[a-z']+/g) || [];
+function startVoice(){
+  if(listening) return;
 
-  // Neutral very-short greetings
-  const isVeryShort = words.length <= 2;
-  if (isVeryShort && (text === "hello" || text === "hi" || text === "hey")){
-    renderResult(0);
-    return;
-  }
+  navigator.mediaDevices.getUserMedia({audio:true})
+  .then(stream=>{
+    audioContext=new (window.AudioContext||window.webkitAudioContext)();
+    analyser=audioContext.createAnalyser();
+    microphone=audioContext.createMediaStreamSource(stream);
+    microphone.connect(analyser);
+    analyser.fftSize=2048;
 
-  // High-stress phrases (strong)
-  const highPhrases = [
-    "i don't know what to do anymore","i dont know what to do anymore",
-    "i can't handle it","i cant handle it","can't handle it","cant handle it",
-    "i can't do this","i cant do this",
-    "i can't take it","i cant take it",
-    "i just can't","i just cant",
-    "i'm done","im done",
-    "help me","i give up",
-    "panic attack","i feel trapped",
-    "i can't breathe","i cant breathe",
-    "i want to disappear","everything is too much"
-  ];
+    const bufferLength=analyser.frequencyBinCount;
+    dataArray=new Uint8Array(bufferLength);
 
-  // Words / emotions
-  const highWords = [
-    "overwhelmed","panic","panicking","stressed","anxious","anxiety","worried","pressure",
-    "burnout","terrified","scared","crying","hopeless","breaking","shaking","frantic",
-    "can't cope","cant cope","suffocating"
-  ];
-
-  const mediumWords = [
-    "nervous","tired","busy","confused","not sure","uncertain","frustrated","upset","annoyed",
-    "stuck","concerned","stressing"
-  ];
-
-  const lowWords = [
-    "calm","relaxed","peaceful","fine","okay","ok","good","comfortable","safe","content","chill"
-  ];
-
-  // Tone features
-  const capsWords = raw.match(/\b[A-Z]{3,}\b/g) || [];                 // "HELP"
-  const exclamations = (raw.match(/!/g) || []).length;                 // !!!
-  const questions = (raw.match(/\?/g) || []).length;                   // ???
-  const repeatedLetters = /([a-zA-Z])\1\1+/.test(raw);                  // soooo
-  const repeatedPunct = /([!?])\1\1+/.test(raw);                        // "!!!" or "???"
-  const ellipses = (raw.match(/\.{3,}/g) || []).length;                 // "..."
-  const allCapsRatio = calcAllCapsRatio(raw);                           // shouting % of letters
-  const hasNegation = /\b(not|never|no|can't|cant|won't|wont|don't|dont)\b/.test(text);
-
-  // Emoji influence from user text ONLY (safe: no emoji buttons)
-  const sadEmoji = (raw.match(/😭|😢|😰|😞|😟|😿/g) || []).length;
-  const angryEmoji = (raw.match(/😡|🤬|😠/g) || []).length;
-  const calmEmoji = (raw.match(/😊|😌|🙂|✨|💗|🌸/g) || []).length;
-
-  // Scoring
-  let score = 0;
-
-  // Phrase hits
-  let phraseHits = 0;
-  highPhrases.forEach(p => {
-    if (text.includes(p)) { score += 8; phraseHits++; }
+    listening=true;
+    analyzeVoice();
+  })
+  .catch(()=>{
+    alert("Microphone access denied.");
   });
+}
 
-  // Word hits
-  let highHits=0, medHits=0, lowHits=0;
-  highWords.forEach(w => { if (text.includes(w)) { score += 4; highHits++; }});
-  mediumWords.forEach(w => { if (text.includes(w)) { score += 2; medHits++; }});
-  lowWords.forEach(w => { if (text.includes(w)) { score -= 2; lowHits++; }});
+function analyzeVoice(){
+  analyser.getByteFrequencyData(dataArray);
 
-  // Negation handling: prevent “not happy” from looking calm
-  if (hasNegation) {
-    if (text.includes("not happy") || text.includes("not fine") || text.includes("not ok") || text.includes("not okay")) {
-      score += 4;
-    }
-    // If many negations, add slight stress
-    const negCount = (text.match(/\b(not|never|no|can't|cant|won't|wont|don't|dont)\b/g) || []).length;
-    score += Math.min(4, negCount);
+  let sum=0;
+  for(let i=0;i<dataArray.length;i++){
+    sum+=dataArray[i];
   }
 
-  // Tone intensity scoring (bounded so it doesn't go crazy)
-  score += Math.min(6, capsWords.length * 2);
-  score += Math.min(6, exclamations * 1);
-  score += Math.min(3, questions * 0.75);
-  if (repeatedLetters) score += 2;
-  if (repeatedPunct) score += 2;
-  score += Math.min(2, ellipses);                 // uncertainty/rumination
-  score += Math.min(6, Math.round(allCapsRatio*10)); // more shouting => more intensity
+  let averageVolume=sum/dataArray.length;
 
-  // Emoji scoring (optional)
-  score += sadEmoji * 2;
-  score += angryEmoji * 2;
-  score -= calmEmoji * 1;
+  let score=0;
+
+  if(averageVolume>90) score+=8;
+  else if(averageVolume>60) score+=4;
+  else score+=1;
 
   renderResult(score);
 
-  // Debug (hidden)
-  document.getElementById("debug").textContent =
-    JSON.stringify({score, phraseHits, highHits, medHits, lowHits, capsWords: capsWords.length, exclamations, questions, repeatedLetters, repeatedPunct, ellipses, allCapsRatio, sadEmoji, angryEmoji, calmEmoji}, null, 2);
+  if(listening){
+    requestAnimationFrame(analyzeVoice);
+  }
+}
+
+function predictText(){
+  const text=document.getElementById("inputText").value.toLowerCase();
+
+  const highWords=["overwhelmed","panic","stressed","anxious","hate","can't","cant","help me"];
+  const mediumWords=["nervous","tired","busy","upset"];
+  const lowWords=["calm","relaxed","fine","okay","good"];
+
+  let score=0;
+
+  highWords.forEach(w=>{if(text.includes(w)) score+=6;});
+  mediumWords.forEach(w=>{if(text.includes(w)) score+=3;});
+  lowWords.forEach(w=>{if(text.includes(w)) score-=2;});
+
+  renderResult(score);
 }
 
 function renderResult(score){
-  let level="Low", cls="low";
-  if (score >= 10) { level="High"; cls="high"; }
-  else if (score >= 4) { level="Medium"; cls="medium"; }
+  let level="Low",cls="low";
+  if(score>=8){level="High";cls="high";}
+  else if(score>=4){level="Medium";cls="medium";}
 
-  // Confidence increases as score moves away from neutral
-  const confidence = Math.min(100, Math.round(45 + Math.min(55, Math.abs(score) * 6)));
+  let confidence=Math.min(100,Math.round(50+Math.abs(score)*5));
 
-  const resultDiv = document.getElementById("result");
-  resultDiv.className = "result " + cls;
-  resultDiv.textContent = "Predicted Stress Level: " + level;
+  let result=document.getElementById("result");
+  result.className=cls;
+  result.textContent="Predicted Stress Level: "+level;
 
-  document.getElementById("confidence").textContent = "Confidence: " + confidence + "%";
-}
-
-function calcAllCapsRatio(raw){
-  const letters = raw.match(/[A-Za-z]/g) || [];
-  if (letters.length === 0) return 0;
-  const caps = raw.match(/[A-Z]/g) || [];
-  return caps.length / letters.length;
+  document.getElementById("confidence").textContent="Confidence: "+confidence+"%";
 }
 
 function clearAll(){
-  document.getElementById("inputText").value = "";
-  const resultDiv = document.getElementById("result");
-  resultDiv.className = "result";
-  resultDiv.textContent = "Predicted Stress Level: —";
-  document.getElementById("confidence").textContent = "Confidence: —";
-  setStatus("");
-}
-
-// ---------------------------
-// Voice input (Web Speech API)
-// ---------------------------
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognizer = null;
-let listening = false;
-
-function setStatus(msg){
-  document.getElementById("status").textContent = msg;
-}
-
-function toggleVoice(){
-  if (!SpeechRecognition){
-    setStatus("Voice input not supported in this browser. Try Chrome/Edge.");
-    return;
-  }
-
-  if (!recognizer){
-    recognizer = new SpeechRecognition();
-    recognizer.lang = "en-US";
-    recognizer.interimResults = false;
-    recognizer.continuous = false;
-
-    recognizer.onstart = () => {
-      listening = true;
-      document.getElementById("voiceBtn").textContent = "Stop Voice";
-      setStatus("Listening… speak now.");
-    };
-
-    recognizer.onresult = (event) => {
-      const transcript = event.results[0][0].transcript || "";
-      document.getElementById("inputText").value = transcript;
-      setStatus("Heard: " + transcript);
-      predictStress();
-    };
-
-    recognizer.onerror = (e) => {
-      setStatus("Voice error: " + (e.error || "unknown"));
-    };
-
-    recognizer.onend = () => {
-      listening = false;
-      document.getElementById("voiceBtn").textContent = "Voice Input";
-      if (document.getElementById("status").textContent === "Listening… speak now.") {
-        setStatus("Stopped listening.");
-      }
-    };
-  }
-
-  if (!listening) recognizer.start();
-  else recognizer.stop();
+  document.getElementById("inputText").value="";
+  document.getElementById("result").textContent="Predicted Stress Level: —";
+  document.getElementById("confidence").textContent="Confidence: —";
 }
 </script>
+
 </body>
 </html>
