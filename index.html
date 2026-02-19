@@ -161,42 +161,50 @@ button:hover{ background:var(--accent-hover); }
 function predictStress(){
   const raw = (document.getElementById("inputText").value || "").trim();
   const text = raw.toLowerCase();
-  const words = text.match(/[a-z']+/g) || [];
 
   const highPhrases = [
-    "i hate",
-    "i'm so sick of","im so sick of",
+    "i hate","i'm so sick of","im so sick of",
     "why are you doing this to me",
     "i can't do this","i cant do this",
     "i don't know what to do","i dont know what to do",
     "please help","help me",
-    "i'm done","im done",
-    "i give up",
+    "i'm done","im done","i give up",
     "everything is too much",
     "i can't handle it","i cant handle it",
-    "i want to disappear"
+    "i want to disappear",
+    "i'm exhausted","im exhausted",
+    "i can't cope","i cant cope",
+    "i feel overwhelmed","i feel trapped",
+    "i feel hopeless","i feel lost",
+    "i am burned out","burned out","burnt out"
+  ];
+
+  const highWords = [
+    "exhausted","overwhelmed","panic","panicking",
+    "stressed","stress","anxious","anxiety",
+    "worried","pressure","hopeless","crying",
+    "breaking","shaking","terrified","drowning",
+    "suffocating","angry","furious","rage","hate",
+    "drained","burned","burnout","done"
+  ];
+
+  const mediumWords = [
+    "tired","fatigued","irritated","frustrated",
+    "upset","annoyed","confused","nervous",
+    "stuck","overworked","busy","unmotivated"
   ];
 
   const positivePhrases = [
     "i'm so excited","im so excited",
     "i can't wait","i cant wait",
-    "oh my god that looks so good",
-    "this is amazing",
-    "i love this",
-    "i'm so happy","im so happy"
-  ];
-
-  const highWords = [
-    "hate","angry","furious","panic","stressed","anxious","overwhelmed",
-    "pressure","hopeless","crying","terrified"
-  ];
-
-  const mediumWords = [
-    "nervous","tired","busy","frustrated","upset","annoyed","confused"
+    "this is amazing","i love this",
+    "i'm so happy","im so happy",
+    "that looks so good","oh my god that looks so good"
   ];
 
   const lowWords = [
-    "calm","relaxed","peaceful","fine","okay","good","content","happy","excited"
+    "calm","relaxed","peaceful","fine",
+    "okay","good","content","happy","excited"
   ];
 
   const sadEmoji = (raw.match(/😭|😢|😰|😞|😟|😿/g) || []).length;
@@ -206,15 +214,15 @@ function predictStress(){
   let score = 0;
 
   highPhrases.forEach(p=>{ if(text.includes(p)) score+=8; });
-  positivePhrases.forEach(p=>{ if(text.includes(p)) score-=6; });
-
   highWords.forEach(w=>{ if(text.includes(w)) score+=5; });
   mediumWords.forEach(w=>{ if(text.includes(w)) score+=3; });
+
+  positivePhrases.forEach(p=>{ if(text.includes(p)) score-=6; });
   lowWords.forEach(w=>{ if(text.includes(w)) score-=3; });
 
-  score += sadEmoji * 2;
-  score += angryEmoji * 2;
-  score -= calmEmoji * 1;
+  score += sadEmoji * 3;
+  score += angryEmoji * 3;
+  score -= calmEmoji * 2;
 
   renderResult(score);
 }
